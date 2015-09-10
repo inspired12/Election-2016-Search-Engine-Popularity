@@ -35,7 +35,7 @@
 <div class="ui">
 	<h1>Week of 12/28/2014 
     </h1>
-    <a href="#" onclick="nextWeek()">view next week</a>
+    <a href="#" onclick="nextWeek(event)">view next week</a>
 </div>
 
 <script src='https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js'></script>
@@ -85,7 +85,9 @@ d3.csv("data.csv",function(root){
     update(d[weekCount].ranks);
 });
 
-function nextWeek(){
+function nextWeek(e){
+
+    e.preventDefault();
 
     weekCount = (weekCount+1<d.length)?weekCount+1:0;
 
@@ -105,7 +107,7 @@ function update(_data){
         return +d.rank;
     }) ]);
 
-    heightScale.domain(_data.map(function(d) { return d.name; } ));
+    heightScale.domain(_data.map(function(d) { return d.name+" "+d.rank.toString().substr(0,4); } ));
 
     var rects =  svg.selectAll("rect").data(_data);
 
@@ -114,10 +116,10 @@ function update(_data){
 
     rects
     .attr("x",0)
-    .attr("y",function(d,i){ return heightScale(d.name);})
+    .attr("y",function(d,i){ return heightScale(d.name+" "+d.rank.toString().substr(0,4));})
 	.attr("height", heightScale.rangeBand())
     .attr("width",function(d,i){ return  widthScale(d.rank); })
-    .append("title").text(function(d,i){   return d["name"]; });
+    .append("title").text(function(d,i){   return d["name"]+" "+d.rank.toString().substr(0,4); });
 
     rects.exit().remove();
 
