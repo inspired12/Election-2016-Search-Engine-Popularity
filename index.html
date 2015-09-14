@@ -26,6 +26,12 @@
         font-size: 11px;
     }
 
+    .foreground path {
+      fill: none;
+      stroke: steelblue;
+    }
+
+
 </style>
 </head>
 <body>
@@ -40,8 +46,8 @@
 <script src='https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js'></script>
 <script>
 
-var margin = {top: 20, right: 10, bottom: 130, left: 120}, 
-   width = window.innerWidth*0.9 - margin.left - margin.right,
+var margin = {top: 20, right: 0, bottom: 130, left: 50}, 
+   width = window.innerWidth*0.98 - margin.left - margin.right,
 	height = 600 - margin.top - margin.bottom;
 
 var widthScale = d3.scale.ordinal()
@@ -53,6 +59,7 @@ var heightScale = d3.scale.ordinal()
 var x = d3.scale.ordinal().rangePoints([0, width],1),
 y = {};
 
+var line = d3.svg.line();
 var axis = d3.svg.axis().orient("left");
 
 var svg = d3.select('body').append('svg')
@@ -92,10 +99,12 @@ function nextWeek(e){
 function update(_data){
 
     x.domain(dimensions = d3.keys(_root).filter(function(d){ 
-        return true && (y[d] = d3.scale.ordinal().domain(_root[d].ranks.map(function(j) { return j.name.split(" ")[1]; } )).rangeRoundBands([ 0, height ], 0.1))
+        return true && (y[d] = d3.scale.ordinal().domain(_root[d].ranks
+            .sort(function(a, b) {
+                return d3.descending(a.rank, b.rank);
+            })
+            .map(function(j) { return j.name.split(" ")[1]; } )).rangeRoundBands([ 0, height ], 0.1))
     }));
-
-console.log(y);
 
  // Add a group element for each dimension.
   var g = svg.selectAll(".dimension")
@@ -113,11 +122,30 @@ console.log(y);
       .attr("y", -9)
       .text(function(d) { return _root[d].week; });
 
-    svg.select(".x.axis").remove();
-    svg.select(".y.axis").remove();
+    svg.selectAll('.axis')
+        .selectAll('.tick')
+        .on('click',clickMe);
 
+    svg.append("g")
+        .attr("class", "foreground")
+        .selectAll("path")
+        .data(_root)
+        .enter().append("path")
+        .attr("d", path);
 
 }
+
+function path(d) {
+
+  return line(dimensions.map(function(p) { 
+        return [x(p), y[p](d[p])]; 
+  }));
+
+}
+
+function clickMe(d){ console.log(d); };
+
+
 
 </script>
 </body>
