@@ -35,30 +35,25 @@
 <div class="ui">
 	<h1>Week of 12/28/2014 
     </h1>
-    <a href="#" onclick="nextWeek(event)">view next week</a>
 </div>
 
 <script src='https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js'></script>
 <script>
 
-var margin = {top: 20, right: 80, bottom: 130, left: 120}, 
+var margin = {top: 20, right: 10, bottom: 130, left: 120}, 
    width = window.innerWidth*0.9 - margin.left - margin.right,
 	height = 600 - margin.top - margin.bottom;
 
-var widthScale = d3.scale.linear()
+var widthScale = d3.scale.ordinal()
                     .range([ 0, width ]);
 
 var heightScale = d3.scale.ordinal()
                     .rangeRoundBands([ 0, height ], 0.1);
 
+var x = d3.scale.ordinal().rangePoints([0, width],1),
+y = {};
 
-var xAxis = d3.svg.axis()
-                .scale(widthScale)
-                .orient("bottom");
-
-var yAxis = d3.svg.axis()
-                .scale(heightScale)
-                .orient("left");
+var axis = d3.svg.axis().orient("left");
 
 var svg = d3.select('body').append('svg')
 	.attr('width', width + margin.left + margin.right)
@@ -66,7 +61,7 @@ var svg = d3.select('body').append('svg')
     .append('g')
 	.attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
 
-var d = [];
+var _root = [];
 var weekCount = 0;
 
 d3.csv("data.csv",function(root){
@@ -80,61 +75,47 @@ d3.csv("data.csv",function(root){
                 }
             }
         }
-        d.push(week);
+        _root.push(week);
     })
-    update(d[weekCount].ranks);
+
+    update();
+
 });
 
 function nextWeek(e){
 
     e.preventDefault();
 
-    weekCount = (weekCount+1<d.length)?weekCount+1:0;
-
-    update(d[weekCount].ranks);
-
-    d3.selectAll("h1").text(function(){  return "Week of "+d[weekCount].week; });
 
 }
 
 function update(_data){
 
-    _data.sort(function(a, b) {
-        return d3.descending(a.rank, b.rank);
-    });
+    x.domain(dimensions = d3.keys(_root).filter(function(d){ 
+        return true && (y[d] = d3.scale.ordinal().domain(_root[d].ranks.map(function(j) { return j.name.split(" ")[1]; } )).rangeRoundBands([ 0, height ], 0.1))
+    }));
 
-    widthScale.domain([ 0, d3.max(_data, function(d) {
-        return +d.rank;
-    }) ]);
+console.log(y);
 
-    heightScale.domain(_data.map(function(d) { return d.name+" "+d.rank.toString().substr(0,4); } ));
+ // Add a group element for each dimension.
+  var g = svg.selectAll(".dimension")
+      .data(dimensions)
+    .enter().append("g")
+      .attr("class", "dimension")
+      .attr("transform", function(d) { return "translate(" + x(d) + ")"; });
 
-    var rects =  svg.selectAll("rect").data(_data);
-
-    rects.enter()
-    .append("rect");
-
-    rects
-    .attr("x",0)
-    .attr("y",function(d,i){ return heightScale(d.name+" "+d.rank.toString().substr(0,4));})
-	.attr("height", heightScale.rangeBand())
-    .attr("width",function(d,i){ return  widthScale(d.rank); })
-    .append("title").text(function(d,i){   return d["name"]+" "+d.rank.toString().substr(0,4); });
-
-    rects.exit().remove();
+  // Add an axis and title.
+  g.append("g")
+      .attr("class", "axis")
+      .each(function(d) { d3.select(this).call(axis.scale(y[d])); })
+    .append("text")
+      .style("text-anchor", "middle")
+      .attr("y", -9)
+      .text(function(d) { return _root[d].week; });
 
     svg.select(".x.axis").remove();
     svg.select(".y.axis").remove();
 
-    svg.append("g")
-        .attr("class", "x axis")
-        .attr("transform", "translate(0 ," + (height) + ")")
-        .call(xAxis);
-
-    svg.append("g")
-        .attr("class", "y axis")
-        .attr("transform", "translate(0,0)")
-        .call(yAxis);
 
 }
 
