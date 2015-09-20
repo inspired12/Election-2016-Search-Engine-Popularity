@@ -45,8 +45,9 @@ var margin = {top: 20, right: 80, bottom: 130, left: 120},
    width = window.innerWidth*0.9 - margin.left - margin.right,
 	height = 600 - margin.top - margin.bottom;
 
-var widthScale = d3.scale.linear()
-                    .range([ 0, width ]);
+var widthScale = d3.scale.ordinal()
+                   // .range([ 0, width ]);
+                    .rangeRoundBands([ 0, width ], 0.1);
 
 var heightScale = d3.scale.ordinal()
                     .rangeRoundBands([ 0, height ], 0.1);
@@ -82,7 +83,10 @@ d3.csv("data.csv",function(root){
         }
         d.push(week);
     })
-    update(d[weekCount].ranks);
+
+   // update(d[weekCount].ranks);
+    update(d);
+
 });
 
 function nextWeek(e){
@@ -99,32 +103,32 @@ function nextWeek(e){
 
 function update(_data){
 
-    _data.sort(function(a, b) {
-        return d3.descending(a.rank, b.rank);
-    });
+    console.log(_data);
 
-    widthScale.domain([ 0, d3.max(_data, function(d) {
-        return +d.rank;
-    }) ]);
+    widthScale.domain(_data.map(function(d) {  return d.week; } ));
 
-    heightScale.domain(_data.map(function(d) { return d.name+" "+d.rank.toString().substr(0,4); } ));
-
-    var rects =  svg.selectAll("rect").data(_data);
-
-    rects.enter()
-    .append("rect");
-
-    rects
-    .attr("x",0)
-    .attr("y",function(d,i){ return heightScale(d.name+" "+d.rank.toString().substr(0,4));})
-	.attr("height", heightScale.rangeBand())
-    .attr("width",function(d,i){ return  widthScale(d.rank); })
-    .append("title").text(function(d,i){   return d["name"]+" "+d.rank.toString().substr(0,4); });
-
-    rects.exit().remove();
+    heightScale.domain(_data.map(function(d,i) { return d.ranks[0].name; } ));
 
     svg.select(".x.axis").remove();
     svg.select(".y.axis").remove();
+
+    var circles = svg.selectAll("circle")
+                    .data(_data)
+                    .enter()
+                    .append("circle");
+
+    circles.attr("cx", function(d) {
+            return widthScale(d.week);
+        })
+        .attr("cy", function(d) {
+            return heightScale(d.ranks[0].name);
+        })
+        .attr("r", function(d){ return d.ranks[0].rank  })
+        .attr("fill", "steelblue")
+        .append("title")
+        .text(function(d) {
+            return d.ranks[0].rank;
+        });
 
     svg.append("g")
         .attr("class", "x axis")
@@ -135,6 +139,8 @@ function update(_data){
         .attr("class", "y axis")
         .attr("transform", "translate(0,0)")
         .call(yAxis);
+
+
 
 }
 
