@@ -33,9 +33,9 @@
 <img src="img/flag.svg">
 
 <div class="ui">
-	<h1>Week of 12/28/2014 
-    </h1>
-    <a href="#" onclick="nextWeek(event)">view next week</a>
+	<h1>The most searched candidates and relative popularity</h1>
+    <p>This visualization shows the most popular presidential candidates every week from the end of last year to June 14th 2015.</p>
+    <p>The most searched candidate is highlighted, and the relative search engine popularity is mapped to the size of the circles</p>
 </div>
 
 <script src='https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js'></script>
@@ -68,10 +68,11 @@ var svg = d3.select('body').append('svg')
 	.attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
 
 var d = [];
-var weekCount = 0;
 
 d3.csv("data.csv",function(root){
+
     root.forEach(function(data){
+console.log("one");
         for(var k in data){
             if (data.hasOwnProperty(k)) {
                 if(k=="Week"){
@@ -81,25 +82,18 @@ d3.csv("data.csv",function(root){
                 }
             }
         }
+
+        week["ranks"].sort(function(a, b) {
+            return d3.descending(a.rank, b.rank);
+        });
+
         d.push(week);
+
     })
 
-   // update(d[weekCount].ranks);
     update(d);
 
 });
-
-function nextWeek(e){
-
-    e.preventDefault();
-
-    weekCount = (weekCount+1<d.length)?weekCount+1:0;
-
-    update(d[weekCount].ranks);
-
-    d3.selectAll("h1").text(function(){  return "Week of "+d[weekCount].week; });
-
-}
 
 function update(_data){
 
@@ -107,7 +101,7 @@ function update(_data){
 
     widthScale.domain(_data.map(function(d) {  return d.week; } ));
 
-    heightScale.domain(_data.map(function(d,i) { return d.ranks[0].name; } ));
+    heightScale.domain(_data.map(function(d) { return d.ranks[0].name; } ));
 
     svg.select(".x.axis").remove();
     svg.select(".y.axis").remove();
@@ -121,14 +115,16 @@ function update(_data){
             return widthScale(d.week);
         })
         .attr("cy", function(d) {
-            return heightScale(d.ranks[0].name);
+            return heightScale(d.ranks[0].name)+20;
         })
-        .attr("r", function(d){ return d.ranks[0].rank  })
-        .attr("fill", "steelblue")
+        .attr("r", 0)
+        .attr("fill", "rgba(178, 34, 52,0.5)")
         .append("title")
         .text(function(d) {
-            return d.ranks[0].rank;
+            return d.ranks[0].name +": "+ d.ranks[0].rank;
         });
+
+    circles.transition().duration(3000).delay(function(d,i){ return i*500 }).attr("r", function(d){ return d.ranks[0].rank  })
 
     svg.append("g")
         .attr("class", "x axis")
