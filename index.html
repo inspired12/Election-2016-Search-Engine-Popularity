@@ -33,32 +33,48 @@
 <img src="img/flag.svg">
 
 <div class="ui">
-	<h1>Week of 12/28/2014 
-    </h1>
-    <a href="#" onclick="nextWeek(event)">view next week</a>
 </div>
 
 <script src='https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js'></script>
 <script>
 
-var margin = {top: 20, right: 80, bottom: 130, left: 120}, 
+var margin = {top: 20, right: 20, bottom: 130, left: 50}, 
    width = window.innerWidth*0.9 - margin.left - margin.right,
 	height = 600 - margin.top - margin.bottom;
 
-var widthScale = d3.scale.linear()
+var widthScale = d3.time.scale()
                     .range([ 0, width ]);
 
-var heightScale = d3.scale.ordinal()
-                    .rangeRoundBands([ 0, height ], 0.1);
+var heightScale = d3.scale.linear()
+								.range([ 0, height ]);
 
+
+//var dateFormat = d3.time.format("%m/%d/%Y");
+var dateFormat = d3.time.format("%x");
 
 var xAxis = d3.svg.axis()
                 .scale(widthScale)
-                .orient("bottom");
+                .orient("bottom")
+                .ticks(11)
+                .tickFormat(function(d) {
+                    return dateFormat(d);
+                });
 
 var yAxis = d3.svg.axis()
                 .scale(heightScale)
                 .orient("left");
+
+//Configure line generator
+var line = d3.svg.line()
+    .x(function(d) {
+        console.log(d);
+        return widthScale(dateFormat.parse(d.week));
+    })
+    .y(function(d) {
+        console.log(d);
+        return heightScale(+d.rank);
+    });
+
 
 var svg = d3.select('body').append('svg')
 	.attr('width', width + margin.left + margin.right)
@@ -74,57 +90,71 @@ d3.csv("data.csv",function(root){
         for(var k in data){
             if (data.hasOwnProperty(k)) {
                 if(k=="Week"){
-                   var week = {"week":data[k],"ranks":[]};
+
+                    var da = data[k];
+                    var dater = (da.substring(0,da.indexOf("/"))<10)?"0"+da.substring(0,da.indexOf("/")):da.substring(0,da.indexOf("/"));
+                    dater= dater+"/"+da.substring(da.indexOf("/")+1,da.length);
+
+                   var week = {"week":dater,"ranks":[]};
                 }else{
                    week["ranks"].push({"name":k,"rank":+data[k]});
                 }
             }
         }
-        d.push(week);
+
+/*
+    week["ranks"].sort(function(a, b) {
+        return d3.descending(a.name, b.name);
+    });
+*/
+
+    d.push(week);
+
     })
-    update(d[weekCount].ranks);
+
+    update(d);
+
 });
-
-function nextWeek(e){
-
-    e.preventDefault();
-
-    weekCount = (weekCount+1<d.length)?weekCount+1:0;
-
-    update(d[weekCount].ranks);
-
-    d3.selectAll("h1").text(function(){  return "Week of "+d[weekCount].week; });
-
-}
 
 function update(_data){
 
-    _data.sort(function(a, b) {
-        return d3.descending(a.rank, b.rank);
-    });
 
-    widthScale.domain([ 0, d3.max(_data, function(d) {
-        return +d.rank;
-    }) ]);
+/*
+*/
 
-    heightScale.domain(_data.map(function(d) { return d.name+" "+d.rank.toString().substr(0,4); } ));
+    widthScale.domain([ 
+        d3.min(_data, function(d) {
+                return dateFormat.parse(d.week);
+        }),
+        d3.max(_data, function(d) {
+            return dateFormat.parse(d.week);
+        })
+    ]);
 
-    var rects =  svg.selectAll("rect").data(_data);
+ //   heightScale.domain(_data.map(function(d) { return d.name; } ));
+				heightScale.domain([200,0]); 
 
-    rects.enter()
-    .append("rect");
 
-    rects
-    .attr("x",0)
-    .attr("y",function(d,i){ return heightScale(d.name+" "+d.rank.toString().substr(0,4));})
-	.attr("height", heightScale.rangeBand())
-    .attr("width",function(d,i){ return  widthScale(d.rank); })
-    .append("title").text(function(d,i){   return d["name"]+" "+d.rank.toString().substr(0,4); });
+/*
+                console.log(_data);
 
-    rects.exit().remove();
+				heightScale.domain([ 
+					d3.max(_data, function(d) {
+						return d3.max(d.rank, function(d) {
+							return +d.amount;
+						});
+					}),
+					0
+				]);
 
-    svg.select(".x.axis").remove();
-    svg.select(".y.axis").remove();
+				heightScale.domain([ 
+
+					d3.max(_data.ranks, function(d) {
+							return +d.rank;
+					}),0
+				]);
+
+*/
 
     svg.append("g")
         .attr("class", "x axis")
@@ -135,6 +165,40 @@ function update(_data){
         .attr("class", "y axis")
         .attr("transform", "translate(0,0)")
         .call(yAxis);
+
+    //Make a group for each country
+    var groups = svg.selectAll("g")
+        .data(_data)
+        .enter()
+        .append("g");
+
+    //Append a title with the country name (so we get easy tooltips)
+    groups.append("title")
+        .text(function(d) {
+console.log(d.ranks[0].name);
+            return d.ranks[0].name;
+        });
+
+    //Within each group, create a new line/path,
+    //binding just the emissions data to each one
+
+    groups.selectAll("path")
+        .data(function(d) {
+            return [ d.ranks[0].rank ];
+        })
+        .enter()
+        .append("path")
+        .attr("class", "line")
+        .attr("d", line)
+        .attr("fill", "none")
+        .attr("stroke", "steelblue")
+        .attr("stroke-width", 2);
+
+        /*
+            var rects =  svg.selectAll("rect").data(_data);
+            rects.enter()
+            .append("rect");
+        */
 
 }
 
