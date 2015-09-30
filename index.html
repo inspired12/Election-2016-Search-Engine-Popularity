@@ -48,6 +48,7 @@ var widthScale = d3.time.scale()
 var heightScale = d3.scale.linear()
 								.range([ 0, height ]);
 
+var root;
 
 //var dateFormat = d3.time.format("%m/%d/%Y");
 var dateFormat = d3.time.format("%x");
@@ -84,20 +85,44 @@ var svg = d3.select('body').append('svg')
 
 var d = [];
 var weekCount = 0;
+var candidates = ["Hillary Clinton", "Bernie Sanders", "Ben Carson", "Ted Cruz", "Carly Fiorina", "Mike Huckabee", "Rand Paul", "Marco Rubio", "Jeb Bush", "Scott Walker", "Chris Christie", "Lindsey Graham", "Rick Santorum", "Martin O'Malley", "George Pataki", "Rick Perry", "Lincoln Chafee", "Bobby Jindal", "John Kasich", "Jim Webb", "Donald Trump"];
+var weeks = [];
+var dataset = [];
+var counter = 0;
+
+for(var i = 0;i<candidates.length;i++){
+
+        dataset.push({
+            candidate: candidates[i],
+            ranks: []
+        });
+
+}
+
+console.log(dataset);
 
 d3.csv("data.csv",function(root){
+    root = root;
     root.forEach(function(data){
         for(var k in data){
+            counter ++;
             if (data.hasOwnProperty(k)) {
                 if(k=="Week"){
-
                     var da = data[k];
                     var dater = (da.substring(0,da.indexOf("/"))<10)?"0"+da.substring(0,da.indexOf("/")):da.substring(0,da.indexOf("/"));
-                    dater= dater+"/"+da.substring(da.indexOf("/")+1,da.length);
-
-                   var week = {"week":dater,"ranks":[]};
+                    dater= dater+"/"+da.substring(da.indexOf("/")+1,da.length); 
+                    weeks.push(dater);
                 }else{
-                   week["ranks"].push({"name":k,"rank":+data[k]});
+
+                    console.log(k);
+                    for(var i = 0; i<dataset.length; i++){
+                        if(dataset[i].candidate == k){
+                            dataset[i].ranks.push({
+                                week: dater,
+                                rank: data[k]
+                            });
+                        }
+                    }
                 }
             }
         }
@@ -108,53 +133,65 @@ d3.csv("data.csv",function(root){
     });
 */
 
-    d.push(week);
+ //   d.push(week);
 
     })
 
-    update(d);
+    console.log(dataset);
+
+    update(dataset);
 
 });
 
 function update(_data){
 
-
-/*
-*/
-
     widthScale.domain([ 
-        d3.min(_data, function(d) {
-                return dateFormat.parse(d.week);
+        d3.min(weeks, function(d) {
+                return dateFormat.parse(d);
         }),
-        d3.max(_data, function(d) {
-            return dateFormat.parse(d.week);
+        d3.max(weeks, function(d) {
+            return dateFormat.parse(d);
         })
     ]);
 
- //   heightScale.domain(_data.map(function(d) { return d.name; } ));
-				heightScale.domain([200,0]); 
+    heightScale.domain([ 
+        d3.max(dataset, function(d) {
+            return d3.max(d.ranks, function(d) {
+                return +d.rank;
+            });
+        }),
+        0
+    ]);
 
 
-/*
-                console.log(_data);
+    //Make a group for each country
+    var groups = svg.selectAll("g")
+        .data(_data)
+        .enter()
+        .append("g");
 
-				heightScale.domain([ 
-					d3.max(_data, function(d) {
-						return d3.max(d.rank, function(d) {
-							return +d.amount;
-						});
-					}),
-					0
-				]);
+    //Append a title with the candidate name (so we get easy tooltips)
+    groups.append("title")
+        .text(function(d) {
+            return d.candidate;
+        });
 
-				heightScale.domain([ 
+    //Within each group, create a new line/path,
+    //binding just the rank data to each one
 
-					d3.max(_data.ranks, function(d) {
-							return +d.rank;
-					}),0
-				]);
+    groups.selectAll("path")
+        .data(function(d) {
+            return [ d.ranks ];
+        })
+        .enter()
+        .append("path")
+        .attr("class", "line")
+        .attr("d", line)
+        .attr("fill", "none")
+        .attr("stroke", "steelblue")
+        .attr("stroke-width", 2);
 
-*/
+
 
     svg.append("g")
         .attr("class", "x axis")
@@ -166,39 +203,6 @@ function update(_data){
         .attr("transform", "translate(0,0)")
         .call(yAxis);
 
-    //Make a group for each country
-    var groups = svg.selectAll("g")
-        .data(_data)
-        .enter()
-        .append("g");
-
-    //Append a title with the country name (so we get easy tooltips)
-    groups.append("title")
-        .text(function(d) {
-console.log(d.ranks[0].name);
-            return d.ranks[0].name;
-        });
-
-    //Within each group, create a new line/path,
-    //binding just the emissions data to each one
-
-    groups.selectAll("path")
-        .data(function(d) {
-            return [ d.ranks[0].rank ];
-        })
-        .enter()
-        .append("path")
-        .attr("class", "line")
-        .attr("d", line)
-        .attr("fill", "none")
-        .attr("stroke", "steelblue")
-        .attr("stroke-width", 2);
-
-        /*
-            var rects =  svg.selectAll("rect").data(_data);
-            rects.enter()
-            .append("rect");
-        */
 
 }
 
